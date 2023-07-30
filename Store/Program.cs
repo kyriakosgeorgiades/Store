@@ -8,7 +8,9 @@ using Store;
 using Store.Context;
 using Store.Interface;
 using Store.Repository;
+using System.Net;
 using System.Text;
+using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -74,6 +76,21 @@ builder.Services.AddAuthentication(x =>
         ValidateAudience = true,
         ValidateLifetime = true,
         ValidateIssuerSigningKey = true
+    };
+    x.Events = new JwtBearerEvents
+    {
+        OnChallenge = async context =>
+        {
+            // Override the default status code and error description
+            context.HandleResponse();
+            context.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
+            context.Response.ContentType = "application/json";
+            var responseObj = new
+            {
+                error = "Invalid or missing token"
+            };
+            await context.Response.WriteAsync(JsonSerializer.Serialize(responseObj));
+        }
     };
 });
 

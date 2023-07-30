@@ -1,6 +1,4 @@
-﻿using AutoMapper;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Query.Internal;
+﻿using Microsoft.EntityFrameworkCore;
 using Store.Context;
 using Store.Entities;
 using Store.Interface;
@@ -39,6 +37,21 @@ namespace Store.Repository
             if (excludeBookId.HasValue)
                 return await _context.Books.AnyAsync(b => b.ISBN == isbn && b.BookId != excludeBookId.Value);
             return await _context.Books.AnyAsync(b => b.ISBN == isbn);
+        }
+
+        public async Task<Book> GetBookById(Guid bookId)
+        {
+            return await _context.Books.FirstOrDefaultAsync(b => b.BookId == bookId);
+        }
+
+        public async Task DeleteBook(Guid bookId)
+        {
+            var book = await _context.Books.FindAsync(bookId);
+            if (book != null)
+            {
+                _context.Books.Remove(book);
+                await _context.SaveChangesAsync();
+            }
         }
     }
 }
