@@ -10,14 +10,14 @@ namespace Store.Controllers.Users;
 
 [Route("api/[controller]")]
 [ApiController]
-public class UserController : ControllerBase
+public class UsersController : ControllerBase
 {
     private readonly IUserRepository _userRepository;
-    private readonly ILogger<UserController> _logger;
+    private readonly ILogger<UsersController> _logger;
     private readonly IConfiguration _configuration;
     private readonly IMapper _mapper;
 
-    public UserController(IUserRepository userRepository, ILogger<UserController> logger, IConfiguration configuration, IMapper mapper)
+    public UsersController(IUserRepository userRepository, ILogger<UsersController> logger, IConfiguration configuration, IMapper mapper)
     {
         _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository)); 
         _logger = logger ?? throw new ArgumentNullException(nameof(logger)); 
