@@ -13,9 +13,18 @@ namespace Store.Repository
             _context = context ?? throw new ArgumentNullException(nameof(context));
         }
 
-        public IEnumerable<Book> GetAllBooks()
+        public async Task<IEnumerable<Book>> GetAllBooks(string searchTerm = null)
         {
-            return _context.Books.OrderBy(b => b.BookName).ToList();
+            IQueryable<Book> query = _context.Books.Include(b => b.Author);
+
+            if (!string.IsNullOrEmpty(searchTerm))
+            {
+                searchTerm = searchTerm.ToLower();
+                query = query.Where(b => b.BookName.ToLower().Contains(searchTerm)
+                                      || b.Author.AuthorName.ToLower().Contains(searchTerm));
+            }
+
+            return await query.ToListAsync();
         }
 
         public async Task<Book> AddBook(Book book)

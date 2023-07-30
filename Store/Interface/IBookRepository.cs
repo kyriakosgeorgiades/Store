@@ -4,7 +4,7 @@ namespace Store.Interface
 {
     public interface IBookRepository
     {
-        IEnumerable<Book> GetAllBooks();
+        Task<IEnumerable<Book>> GetAllBooks(string searchTerm = null);
 
         Task<Book> UpdateBook(Book book);
 

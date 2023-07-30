@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Store.Entities;
 using Store.Interface;
 using Store.Models.Books.Request;
+using Store.Models.Books.Response;
 
 namespace Store.Controllers.Books;
 
@@ -23,16 +24,34 @@ public class BooksController : Controller
     }
 
     [HttpGet]
-    [ProducesResponseType(200, Type = typeof(IEnumerable<Book>))]
-    public IActionResult GetBooks()
+    [ProducesResponseType(200, Type = typeof(IEnumerable<BookSearchResponse>))]
+    public async Task<IActionResult> GetBooks([FromQuery] string? searchTerm)
     {
-        var books = _bookRepository.GetAllBooks();
+        try
+        {
+            _logger.LogInformation($"Attempting to fetch books with search term: {searchTerm ?? "All"}");
 
-        if (!ModelState.IsValid)
-            return BadRequest(ModelState);
+            var books = await _bookRepository.GetAllBooks(searchTerm);
 
-        return Ok(books);
+            if (!books.Any())
+            {
+                _logger.LogInformation($"No books found for the search term: {searchTerm}.");
+                return NotFound($"No books found for the search term: {searchTerm}.");
+            }
+
+            var booksResponse = _mapper.Map<IEnumerable<BookSearchResponse>>(books);
+            _logger.LogInformation($"{booksResponse.Count()} books retrieved successfully.");
+
+            return Ok(booksResponse);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError($"Error while fetching books: {ex.Message}");
+            return StatusCode(500, "Internal server error. Please try again later.");
+        }
     }
+
+
 
     [HttpPost("Book")]
     public async Task<IActionResult> SaveBook(SaveBookRequest book)
