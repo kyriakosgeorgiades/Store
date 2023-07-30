@@ -75,4 +75,56 @@ public class BooksController : Controller
         return BadRequest("Invalid book data provided.");
     }
 
+    [HttpGet("Book/{bookId:guid}")]
+    public async Task<IActionResult> GetBookById(Guid bookId)
+    {
+        if (bookId == Guid.Empty)
+        {
+            _logger.LogWarning("BookId provided is empty.");
+            return BadRequest("BookId must not be empty.");
+        }
+
+        try
+        {
+            var book = await _bookRepository.GetBookById(bookId);
+            if (book == null)
+            {
+                _logger.LogWarning($"Book with BookId: {bookId} not found.");
+                return NotFound($"No book found with BookId: {bookId}.");
+            }
+
+            return Ok(book);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError($"Error fetching book with BookId: {bookId}. Error: {ex.Message}");
+            return StatusCode(500, "Internal server error. Please try again later.");
+        }
+    }
+
+    [HttpDelete("Book/{bookId}")]
+    public async Task<IActionResult> DeleteBook(Guid bookId)
+    {
+        try
+        {
+            var book = await _bookRepository.GetBookById(bookId);
+            if (book == null)
+            {
+                _logger.LogWarning($"Book with ID {bookId} not found.");
+                return NotFound($"Book with ID {bookId} not found.");
+            }
+
+            await _bookRepository.DeleteBook(bookId);
+            _logger.LogInformation($"Book with ID {bookId} was deleted.");
+
+            return Ok($"Book with ID {bookId} was deleted.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"An error occurred while trying to delete the book with ID {bookId}.");
+            return StatusCode(500, "Internal server error. Please try again later.");
+        }
+    }
+
+
 }
