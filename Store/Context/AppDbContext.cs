@@ -46,6 +46,12 @@ public class AppDbContext : DbContext
             .HasIndex(u => u.Email)
             .IsUnique();
 
+        modelBuilder.Entity<Book>()
+            .HasIndex(b => b.ISBN)
+            .IsUnique()
+            .HasDatabaseName("IX_Unique_ISBN");
+
+
         // Property Configurations
         modelBuilder.Entity<User>()
             .Property(u => u.Password)
