@@ -2,13 +2,17 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Store.Entities;
+using Store.Examples.Books.Request;
+using Store.Examples.Books.Response;
 using Store.Interface;
 using Store.Models.Books.Request;
 using Store.Models.Books.Response;
+using Swashbuckle.AspNetCore.Annotations;
+using Swashbuckle.AspNetCore.Filters;
 
 namespace Store.Controllers.Books;
 
-[Authorize]
+//[Authorize]
 [Route("api/[controller]")]
 [ApiController]
 public class BooksController : Controller
@@ -23,6 +27,11 @@ public class BooksController : Controller
         _logger = logger ?? throw new ArgumentNullException(nameof(_logger));
     }
 
+    /// <summary>
+    /// Retrieves all books.
+    /// </summary>
+    /// <returns>A list of books based on the search query</returns>
+    [SwaggerResponseExample(200, typeof(ExampleListOfBookSearchResponse))]
     [HttpGet]
     [ProducesResponseType(200, Type = typeof(IEnumerable<BookSearchResponse>))]
     public async Task<IActionResult> GetBooks([FromQuery] string? searchTerm)
@@ -52,8 +61,21 @@ public class BooksController : Controller
     }
 
 
-
+    /// <summary>
+    /// Saves a book. If a BookId is provided, it updates the book, otherwise, it creates a new book.
+    /// </summary>
+    /// <param name="book">The request containing details of the book to be saved. Adding a BookId it updates while passing null it creates a new one</param>
+    /// <returns>A response indicating the result of the save operation.</returns>
+    /// <response code="201">If the book is successfully created.</response>
+    /// <response code="200">If the book is successfully updated.</response>
+    /// <response code="400">If there's a validation issue or duplicate ISBN.</response>
+    /// <response code="500">If there's an internal server error.</response>
     [HttpPost("Book")]
+    [SwaggerRequestExample(typeof(SaveBookRequest), typeof(SaveBookRequestExample))]
+    [SwaggerResponse(201, "Book successfully created.", Type = typeof(string))]
+    [SwaggerResponse(200, "Book successfully updated.", Type = typeof(string))]
+    [SwaggerResponse(400, "Bad Request. Due to validation issue or duplicate ISBN.", Type = typeof(string))]
+    [SwaggerResponse(500, "Internal server error. Please try again later.", Type = typeof(string))]
     public async Task<IActionResult> SaveBook(SaveBookRequest book)
     {
         if (ModelState.IsValid)
@@ -94,7 +116,17 @@ public class BooksController : Controller
         return BadRequest("Invalid book data provided.");
     }
 
+    /// <summary>
+    /// Retrieves a book by its unique identifier.
+    /// </summary>
+    /// <param name="bookId">The unique identifier of the book.</param>
+    /// <returns>The detailed information of the book if found; otherwise, an error message.</returns>
     [HttpGet("Book/{bookId:guid}")]
+    [SwaggerOperation(Summary = "Retrieve a book by its ID")]
+    [SwaggerResponse(200, "Returns the book with the specified ID.", typeof(Book))] // Assuming the repository returns a `Book` type.
+    [SwaggerResponse(400, "If the provided bookId is empty or invalid.", Type = typeof(string))]
+    [SwaggerResponse(404, "If no book is found with the provided ID.", Type = typeof(string))]
+    [SwaggerResponse(500, "Internal server error. Please try again later.", Type = typeof(string))]
     public async Task<IActionResult> GetBookById(Guid bookId)
     {
         if (bookId == Guid.Empty)
@@ -121,7 +153,16 @@ public class BooksController : Controller
         }
     }
 
+    /// <summary>
+    /// Deletes a book by its unique identifier.
+    /// </summary>
+    /// <param name="bookId">The unique identifier of the book to be deleted.</param>
+    /// <returns>A success message if the book was deleted; otherwise, an error message.</returns>
     [HttpDelete("Book/{bookId}")]
+    [SwaggerOperation(Summary = "Deletes a book by its ID")]
+    [SwaggerResponse(200, "The book was successfully deleted.", Type = typeof(string))]
+    [SwaggerResponse(404, "If no book is found with the provided ID.", Type = typeof(string))]
+    [SwaggerResponse(500, "Internal server error. Please try again later.", Type = typeof(string))]
     public async Task<IActionResult> DeleteBook(Guid bookId)
     {
         try

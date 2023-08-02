@@ -1,4 +1,6 @@
-﻿namespace Store.Models.Books.Response;
+﻿using Swashbuckle.AspNetCore.Annotations;
+
+namespace Store.Models.Books.Response;
 
 public class BookSearchResponse
 {

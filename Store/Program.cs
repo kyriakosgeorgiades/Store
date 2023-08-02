@@ -8,7 +8,9 @@ using Store;
 using Store.Context;
 using Store.Interface;
 using Store.Repository;
+using Swashbuckle.AspNetCore.Filters;
 using System.Net;
+using System.Reflection;
 using System.Text;
 using System.Text.Json;
 
@@ -25,14 +27,23 @@ builder.Services.AddScoped<IBookRepository, BookRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerExamplesFromAssemblyOf<Program>();  // Add this line
+
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new OpenApiInfo { Title = "Your API Title", Version = "v1" });
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "Book Store", Version = "v1" });
+
+    var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+    c.IncludeXmlComments(xmlPath);
+    c.EnableAnnotations();
+    c.UseAllOfToExtendReferenceSchemas();
+    c.ExampleFilters();
 
     // Define the BearerAuth scheme
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
-        Description = "JWT Authorization header using the Bearer scheme. Enter 'Bearer' [space] and then your token in the text input below.",
+        Description = "JWT Authorization header using the Bearer scheme.",
         Name = "Authorization",
         In = ParameterLocation.Header,
         Type = SecuritySchemeType.ApiKey,
@@ -46,53 +57,43 @@ builder.Services.AddSwaggerGen(c =>
             {
                 Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
             },
-            new string[] {}
+            Array.Empty<string>()
         }
     });
 });
 
-
 if (builder.Environment.IsDevelopment())
-    builder.Configuration.AddJsonFile("appsettings.Local.json", true, true);
+    builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
-builder.Services.AddAuthentication(x =>
-{
-    x.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    x.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-    x.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
-}).AddJwtBearer(x =>
-{
-    x.TokenValidationParameters = new TokenValidationParameters
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
     {
-        ValidIssuer = builder.Configuration["JwtSettings:Issuer"],
-        ValidAudience = builder.Configuration["JwtSettings:Audience"],
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JwtSettings:Key"])),
-        ValidateIssuer = true,
-        ValidateAudience = true,
-        ValidateLifetime = true,
-        ValidateIssuerSigningKey = true
-    };
-    x.Events = new JwtBearerEvents
-    {
-        OnChallenge = async context =>
+        options.TokenValidationParameters = new TokenValidationParameters
         {
-            // Override the default status code and error description
-            context.HandleResponse();
-            context.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
-            context.Response.ContentType = "application/json";
-            var responseObj = new
+            ValidIssuer = builder.Configuration["JwtSettings:Issuer"],
+            ValidAudience = builder.Configuration["JwtSettings:Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JwtSettings:Key"])),
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true
+        };
+        options.Events = new JwtBearerEvents
+        {
+            OnChallenge = async context =>
             {
-                error = "Invalid or missing token"
-            };
-            await context.Response.WriteAsync(JsonSerializer.Serialize(responseObj));
-        }
-    };
-});
+                context.HandleResponse();
+                context.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
+                var responseObj = new { error = "Invalid or missing token" };
+                await context.Response.WriteAsync(JsonSerializer.Serialize(responseObj));
+            }
+        };
+    });
 
 builder.Services.AddCors();
 
@@ -105,13 +106,14 @@ try
 {
     logger.LogInformation("Initializing application...");
 
-    app.UseCors(builder =>
+    app.UseCors(policyBuilder =>
     {
-        builder.AllowAnyMethod();
-        builder.AllowAnyHeader();
-        builder.WithOrigins("http://localhost:8081");
+        policyBuilder.AllowAnyMethod();
+        policyBuilder.AllowAnyHeader();
+        policyBuilder.WithOrigins("http://localhost:8081");
     });
 
+    // Database operations
     using var scope = app.Services.CreateScope();
     var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     dbContext.Database.Migrate();
@@ -119,31 +121,28 @@ try
     // Check if the Books table is empty
     if (!dbContext.Books.Any())
     {
-        SeedData(app); // If empty, run the seed logic
+        SeedData(app);  // Seed if empty
     }
 
-    void SeedData(IHost app)
+    void SeedData(IHost appHost)
     {
-        var scopedFactory = app.Services.GetService<IServiceScopeFactory>();
-
-        using (var scope = scopedFactory.CreateScope())
-        {
-            var service = scope.ServiceProvider.GetService<Seed>();
-            service.SeedData();
-        }
+        using var seedScope = appHost.Services.CreateScope();
+        var seedService = seedScope.ServiceProvider.GetRequiredService<Seed>();
+        seedService.SeedData();
     }
 
-    // Configure the HTTP request pipeline.
     if (app.Environment.IsDevelopment())
     {
         app.UseSwagger();
-        app.UseSwaggerUI();
+        app.UseSwaggerUI(c =>
+        {
+            c.SwaggerEndpoint("/swagger/v1/swagger.json", "Book Store v1");
+        });
     }
 
-    app.UseHttpsRedirection();
+    //app.UseHttpsRedirection();
 
     app.UseAuthentication();
-
     app.UseAuthorization();
 
     app.MapControllers();
@@ -157,6 +156,7 @@ catch (Exception ex)
 }
 finally
 {
-    // Ensure to flush and stop internal timers/threads before application exit (Avoid segmentation fault on Linux)
-    NLog.LogManager.Shutdown();
+    //NLog.LogManager.Shutdown();
 }
+
+public partial class Program { }

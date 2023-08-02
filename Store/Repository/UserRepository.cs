@@ -33,7 +33,7 @@ public class UserRepository : IUserRepository
             return true;
         }
         catch (Exception ex) {
-            _logger.LogError("Something went wrong during registration: ", ex);
+            _logger.LogError($"Something went wrong during registration: {ex.Message}", ex);
             return false;
         }
 
