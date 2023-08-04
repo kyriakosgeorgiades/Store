@@ -1,3 +1,4 @@
+using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -6,7 +7,14 @@ using NLog.Extensions.Logging;
 using NLog.Web;
 using Store;
 using Store.Context;
-using Store.Interface;
+using Store.Domains;
+using Store.Domains.Books;
+using Store.Domains.Interfaces;
+using Store.Domains.Interfaces.Books;
+using Store.Domains.Interfaces.Users;
+using Store.Domains.Users;
+using Store.IRepository;
+using Store.Middleware;
 using Store.Repository;
 using Swashbuckle.AspNetCore.Filters;
 using System.Net;
@@ -25,9 +33,18 @@ builder.Services.AddControllers();
 builder.Services.AddTransient<Seed>();
 builder.Services.AddScoped<IBookRepository, BookRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IAuthorRepository, AuthorRepository>();
+builder.Services.AddScoped<IBookDomainService, BookDomainService>();
+builder.Services.AddScoped<IUserDomainService, UserDomainService>();
+builder.Services.AddScoped<IAuthorDomainService, AuthorDomainService>();
 builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerExamplesFromAssemblyOf<Program>();  // Add this line
+builder.Services.AddSwaggerExamplesFromAssemblyOf<Program>();
+builder.Services.AddControllers().AddFluentValidation(fv =>
+    fv.RegisterValidatorsFromAssemblyContaining<SaveBookRequestValidator>());
+
+
+
 
 builder.Services.AddSwaggerGen(c =>
 {
@@ -106,12 +123,29 @@ try
 {
     logger.LogInformation("Initializing application...");
 
+    // CORS configuration before any other middleware that might send headers
     app.UseCors(policyBuilder =>
     {
+        policyBuilder.AllowAnyOrigin();
         policyBuilder.AllowAnyMethod();
         policyBuilder.AllowAnyHeader();
-        policyBuilder.WithOrigins("http://localhost:8081");
     });
+
+    app.UseMiddleware<ExceptionHandlingMiddleware>();
+ 
+
+    if (app.Environment.IsDevelopment())
+    {
+        app.UseSwagger();
+        app.UseSwaggerUI(c =>
+        {
+            c.SwaggerEndpoint("/swagger/v1/swagger.json", "Book Store v1");
+        });
+    }
+
+    app.UseHttpsRedirection();
+    app.UseAuthentication();
+    app.UseAuthorization();
 
     // Database operations
     using var scope = app.Services.CreateScope();
@@ -130,20 +164,6 @@ try
         var seedService = seedScope.ServiceProvider.GetRequiredService<Seed>();
         seedService.SeedData();
     }
-
-    if (app.Environment.IsDevelopment())
-    {
-        app.UseSwagger();
-        app.UseSwaggerUI(c =>
-        {
-            c.SwaggerEndpoint("/swagger/v1/swagger.json", "Book Store v1");
-        });
-    }
-
-    //app.UseHttpsRedirection();
-
-    app.UseAuthentication();
-    app.UseAuthorization();
 
     app.MapControllers();
 

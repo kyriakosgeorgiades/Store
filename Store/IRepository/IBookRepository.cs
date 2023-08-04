@@ -1,6 +1,6 @@
 ﻿using Store.Entities;
 
-namespace Store.Interface
+namespace Store.IRepository
 {
     public interface IBookRepository
     {

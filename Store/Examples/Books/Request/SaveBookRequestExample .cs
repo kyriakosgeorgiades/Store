@@ -11,7 +11,11 @@ public class SaveBookRequestExample : IExamplesProvider<SaveBookRequest>
         {
             BookId = null, // for a new book; for updating, you'd use a real Guid.
             BookName = "Sample Book Title",
-            AuthId = new Guid("9A45E46C-23F3-4BDB-B57F-08DB912DDE1A"),
+            Author = new AuthorDto
+            {
+                AuthorId = new Guid("9A45E46C-23F3-4BDB-B57F-08DB912DDE1A"),
+                AuthorName = "Kostis",
+            },
             ISBN = "978-3-16-148410-0",
             PublicationYear = new DateTime(2023, 5, 15)
         };

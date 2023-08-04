@@ -1,7 +1,7 @@
 ﻿namespace Store.Examples.Books.Response;
 
-using Swashbuckle.AspNetCore.Filters;
 using Store.Models.Books.Response;
+using Swashbuckle.AspNetCore.Filters;
 using System.Collections.Generic;
 
 public class ExampleListOfBookSearchResponse : IExamplesProvider<IEnumerable<BookSearchResponse>>

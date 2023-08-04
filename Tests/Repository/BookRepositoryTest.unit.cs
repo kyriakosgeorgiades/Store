@@ -2,7 +2,7 @@
 using NUnit.Framework;
 using Store.Context;
 using Store.Entities;
-using Store.Interface;
+using Store.IRepository;
 using Store.Repository;
 
 namespace Tests.Repository;
@@ -86,6 +86,4 @@ public class BookRepositoryTests
         Assert.IsNotNull(addedBook);
         Assert.AreEqual(book.BookName, addedBook.BookName);
     }
-
-    // Add similar tests for other methods (UpdateBook, DoesISBNExist, GetBookById, DeleteBook)...
 }

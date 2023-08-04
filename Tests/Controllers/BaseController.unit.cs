@@ -1,13 +1,13 @@
-﻿using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Moq;
 using Store.Context;
@@ -20,6 +20,7 @@ namespace Tests.Controllers
     {
         protected HttpClient Client { get; }
         protected AppDbContext Context { get; }
+        protected IConfiguration Configuration { get; private set; }
 
         public BaseController(HttpClient client)
         {
@@ -32,37 +33,44 @@ namespace Tests.Controllers
 
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
+
             builder.ConfigureServices(services =>
             {
-                var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(IAuthenticationSchemeProvider));
-                if (descriptor == null)
+                // Check if JwtBearer authentication is already added
+                var jwtBearerDescriptor = services.FirstOrDefault(d =>
+                    d.ServiceType == typeof(IConfigureOptions<JwtBearerOptions>));
+
+                if (jwtBearerDescriptor != null)
                 {
-                    // Add the mocked logger
-                    var loggerMock = new Mock<ILogger<Program>>();
-                    services.AddSingleton(loggerMock.Object);
-
-                    services.AddDbContext<AppDbContext>(options =>
-                        options.UseInMemoryDatabase(databaseName: "IntegrationTestDb"), ServiceLifetime.Singleton);
-
-
-                    services.AddAuthentication(options =>
-                    {
-                        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-                        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-                    }).AddJwtBearer(options =>
-                    {
-                        options.TokenValidationParameters = new TokenValidationParameters
-                        {
-                            ValidateIssuer = false,
-                            ValidateAudience = false,
-                            ValidateLifetime = false,
-                            ValidateIssuerSigningKey = false,
-                            ValidIssuer = "Test",
-                            ValidAudience = "Test",
-                            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("A key used for tests"))
-                        };
-                    });
+                    return;  // If JwtBearer authentication is already added, skip re-adding it.
                 }
+
+                // Add the mocked logger
+                var loggerMock = new Mock<ILogger<Program>>();
+                services.AddSingleton(loggerMock.Object);
+
+                // Override the database connection using the test configuration
+                var connectionString = Configuration.GetConnectionString("DefaultConnection");
+                services.AddDbContext<AppDbContext>(options =>
+                    options.UseSqlServer(connectionString), ServiceLifetime.Singleton);
+
+                services.AddAuthentication(options =>
+                {
+                    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+                }).AddJwtBearer(options =>
+                {
+                    options.TokenValidationParameters = new TokenValidationParameters
+                    {
+                        ValidateIssuer = false,
+                        ValidateAudience = false,
+                        ValidateLifetime = false,
+                        ValidateIssuerSigningKey = false,
+                        ValidIssuer = "Test",
+                        ValidAudience = "Test",
+                        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("A key used for tests"))
+                    };
+                });
             });
 
             builder.Configure(app =>

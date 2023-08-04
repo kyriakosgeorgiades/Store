@@ -1,13 +1,17 @@
 ﻿using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
+using Newtonsoft.Json;
 using NUnit.Framework;
 using Store.Context;
 using Store.Entities;
 using Store.Models.Books.Request;
 using Store.Models.Books.Response;
+using Store.Models.Users.Request;
+using Store.Models.Users.Response;
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
-
+using System.Text;
 
 namespace Tests.Controllers;
 
@@ -15,7 +19,7 @@ public class BooksControllerTest : BaseController
 {
     public BooksControllerTest() : base(new WebApplicationFactory<Program>().CreateClient()) { }
 
- 
+
 
 
 
@@ -56,9 +60,10 @@ public class BooksControllerTest : BaseController
 
         // Assert
         response.EnsureSuccessStatusCode();
-        var result = await response.Content.ReadFromJsonAsync<IEnumerable<BookSearchResponse>>();
-        Assert.NotNull(result);
-        Assert.IsNotEmpty(result);
+        var wrapperResult = await response.Content.ReadFromJsonAsync<BooksWrapperResponse>();
+        Assert.NotNull(wrapperResult);
+        Assert.NotNull(wrapperResult.Books);
+        Assert.IsNotEmpty(wrapperResult.Books);
 
         // Clean up after the test (optional, based on your testing strategy)
         var addedBook = context.Books.SingleOrDefault(b => b.ISBN == bookISBN);
@@ -105,12 +110,20 @@ public class BooksControllerTest : BaseController
             BookName = "New Book",
             ISBN = "1234567890124",
             BookId = null,
-            AuthId = author.AuthorId,  // Use the AuthorId from the database
+            Author = new AuthorDto
+            {
+                AuthorId = author.AuthorId,
+                AuthorName = author.AuthorName,
+            },  
             PublicationYear = new DateTime(DateTime.Now.Year, 1, 1)
         };
 
         // Execute the API call using the SaveBookRequest DTO
+        var token = await GetJwtToken();
+        Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         var response = await Client.PostAsJsonAsync("/api/Books/Book", bookRequest);
+
+
 
         // Check the response
         Assert.AreEqual(HttpStatusCode.Created, response.StatusCode);
@@ -170,9 +183,16 @@ public class BooksControllerTest : BaseController
             BookId = initialBook.BookId, // This ensures we're updating and not creating
             BookName = "Updated Book",
             ISBN = initialBook.ISBN,
-            AuthId = initialBook.AuthId,
+            Author = new AuthorDto
+            {
+                AuthorId = initialBook.AuthId,
+                AuthorName = author.AuthorName
+            },
             PublicationYear = initialBook.PublicationYear
         };
+
+        var token = await GetJwtToken();
+        Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         var response = await Client.PostAsJsonAsync("/api/Books/Book", updateRequest);
         Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
 
@@ -257,21 +277,45 @@ public class BooksControllerTest : BaseController
         var bookToDelete = new Book
         {
             BookName = "Book to Delete",
-            ISBN = "1234567890126",
+            ISBN = GenerateRandomISBN(),
             BookUrl = "test.com",
             AuthId = author.AuthorId
         };
         context.Books.Add(bookToDelete);
         await context.SaveChangesAsync();
 
-        // Act
+        // Act: Delete the book
+        var token = await GetJwtToken();
+        Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         var deleteResponse = await Client.DeleteAsync($"/api/Books/Book/{bookToDelete.BookId}");
+        Assert.IsTrue(deleteResponse.IsSuccessStatusCode, "Failed to delete the book.");
 
-        // Assert
-        deleteResponse.EnsureSuccessStatusCode();
+        // Get all books
         var getResponse = await Client.GetAsync("/api/Books");
-        var books = await getResponse.Content.ReadFromJsonAsync<IEnumerable<Book>>();
+        var wrapperResult = await getResponse.Content.ReadFromJsonAsync<BooksWrapperResponse>();
+        var books = wrapperResult?.Books ?? new List<BookSearchResponse>();
+
+        // Assert: Ensure the book is not present in the list
         Assert.IsFalse(books.Any(b => b.BookId == bookToDelete.BookId), "Book was not successfully deleted");
     }
 
+    public string GenerateRandomISBN()
+    {
+        var rnd = new Random();
+        return $"{rnd.Next(100, 999)}-{rnd.Next(1000, 9999)}-{rnd.Next(1000, 9999)}";
+    }
+
+    private async Task<string> GetJwtToken()
+    {
+        var loginRequest = new LoginModelRequest { UserNameOrEmail = "User1", Password = "Password1"}; 
+        var response = await Client.PostAsync("/api/Users/Login", new StringContent(JsonConvert.SerializeObject(loginRequest), Encoding.UTF8, "application/json"));
+        response.EnsureSuccessStatusCode();
+
+        var content = await response.Content.ReadAsStringAsync();
+        var tokenResponse = JsonConvert.DeserializeObject<LoginModelResponse>(content);
+        return tokenResponse.Jwt;
+    }
+
+
 }
+

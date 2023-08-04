@@ -14,5 +14,9 @@ public class BookProfile : Profile
         CreateMap<Book, BookSearchResponse>();
 
         CreateMap<Author, AuthorSearchResponse>();
+
+        CreateMap<AuthorDto, Author>();
+
+        CreateMap<Author, AuthorDto>();
     }
 }

@@ -4,7 +4,7 @@ using Moq;
 using NUnit.Framework;
 using Store.Context;
 using Store.Entities;
-using Store.Interface;
+using Store.IRepository;
 using Store.Repository;
 
 namespace Tests.Repository;

@@ -11,3 +11,9 @@ public class BookSearchResponse
     public DateTime PublicationYear { get; set; }
     public AuthorSearchResponse Author { get; set; }
 }
+
+public class BooksWrapperResponse
+{
+    public IEnumerable<BookSearchResponse> Books { get; set; }
+}
+
