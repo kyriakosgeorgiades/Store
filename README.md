@@ -61,7 +61,7 @@ Update-Database
 ```
 
 ### Testing
-To run the tests both integration and unit test switch the database to "localhost" and right-click on the Test project and select "Run Tests". After you are done don't forget to switch back to "db" the server in the connection string
+To run the tests both integration and unit test switch the connection string to "localhost" and right-click on the Test project and select "Run Tests". After you are done don't forget to switch back to "db" the server in the connection string
 
 
 Accessing the API
