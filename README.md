@@ -24,7 +24,7 @@ This repository contains the backend code for the BookStore. It provides RESTful
 To get started, clone the repository to your local machine:
 
 ```bash
-git clone https://github.com/your-username/project-backend.git ```
+[git clone https://github.com/your-username/project-backend.git](https://github.com/kyriakosgeorgiades/Store.git) ```
 
 Change into the project folder:
 ```bash
