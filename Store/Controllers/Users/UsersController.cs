@@ -1,10 +1,10 @@
-﻿using AutoMapper;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Store.Auth;
-using Store.Entities;
-using Store.Interface;
+using Store.Domains.Interfaces.Users;
+using Store.Exceptions;
 using Store.Models.Users.Request;
 using Store.Models.Users.Response;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace Store.Controllers.Users;
 
@@ -12,74 +12,83 @@ namespace Store.Controllers.Users;
 [ApiController]
 public class UsersController : ControllerBase
 {
-    private readonly IUserRepository _userRepository;
     private readonly ILogger<UsersController> _logger;
     private readonly IConfiguration _configuration;
-    private readonly IMapper _mapper;
+    private readonly IUserDomainService _userDomainService;
 
-    public UsersController(IUserRepository userRepository, ILogger<UsersController> logger, IConfiguration configuration, IMapper mapper)
+    public UsersController(ILogger<UsersController> logger, IConfiguration configuration, IUserDomainService userDomainService)
     {
-        _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository)); 
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger)); 
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
-        _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
+        _userDomainService = userDomainService ?? throw new ArgumentNullException(nameof(userDomainService));
     }
 
+    /// <summary>
+    /// Authenticates the user based on the provided credentials and returns a JWT token.
+    /// </summary>
+    /// <param name="model">The login details of the user.</param>
+    /// <returns>Details of authenticated user along with a JWT token.</returns>
     [HttpPost("Login")]
+    [SwaggerOperation(Summary = "Logs the user in and returns a JWT token.")]
+    [SwaggerResponse(200, "Successfully authenticated and token returned.", Type = typeof(LoginModelResponse))]
+    [SwaggerResponse(400, "Invalid request or authentication failed.", Type = typeof(string))]
     public async Task<IActionResult> Login(LoginModelRequest model)
     {
-        if (ModelState.IsValid)
+        if (!ModelState.IsValid)
+            throw new BadRequestException("Invalid request.");
+
+        var user = await _userDomainService.AuthenticateAsync(model);
+        var token = Authentication.GenerateJwtToken(user, _configuration);
+
+        _logger.LogInformation("Token initialized!");
+
+        return Ok(new LoginModelResponse
         {
-            var user = await _userRepository.GetUserByUserNameOrEmail(model.UserNameOrEmail);
-            if (user != null)
-            {
-                if (!Authentication.VerifyPassword(model.Password, user.Password))
-                {
-                    _logger.LogWarning($"Invalid login attempt for : {model.UserNameOrEmail}");
-                    return Unauthorized(new { message = "Invalid login credentials" });
-                }
-
-                var token = Authentication.GenerateJwtToken(user, _configuration);
-                _logger.LogInformation("Token initialized!");
-
-                return Ok(new LoginModelResponse { Jwt = token });
-            }
-            else
-            {
-                // User not found
-                _logger.LogWarning($"Invalid login attempt for : {model.UserNameOrEmail}.");
-                return NotFound(new { message = "User not found" });
-            }
-        }
-
-        // Model validation failed
-        _logger.LogWarning($"Login attempt with invalid model state.");
-        return BadRequest(new { message = "Bad request" });
+            UserId = user.UserId,
+            UserEmail = user.Email,
+            UserName = user.UserName,
+            Jwt = token
+        });
     }
 
-
+    /// <summary>
+    /// Registers a new user in the system.
+    /// </summary>
+    /// <param name="model">The registration details of the new user.</param>
+    /// <returns>Returns 201 Created upon successful registration.</returns>
     [HttpPost("Register")]
+    [SwaggerOperation(Summary = "Registers a new user.")]
+    [SwaggerResponse(201, "User successfully registered.")]
+    [SwaggerResponse(400, "Invalid registration data or user already exists.", Type = typeof(string))]
     public async Task<IActionResult> Register(RegisterModelRequest model)
     {
-        if (ModelState.IsValid)
-        {
-            if (await _userRepository.UsernameExists(model.UserName))
-            {
-                return BadRequest(new { message = "Username already exists." });
-            }
+ 
+        await _userDomainService.RegisterAsync(model);
 
-            if (await _userRepository.EmailExists(model.Email))
-            {
-                return BadRequest(new { message = "Email already in use." });
-            }
-            model.Password = Authentication.HashPassword(model.Password);
-            await _userRepository.RegisterUser(_mapper.Map<User>(model));
-            return Created("", null);
-        }
+        return Created("", null);
+    }
 
-        // Model validation failed
-        _logger.LogWarning($"Registration attempt with invalid model state.");
-        return BadRequest(new { message = "Bad request" });
+    /// <summary>
+    /// Validates the provided JWT token.
+    /// </summary>
+    /// <returns>Confirms the validity of the token.</returns>
+    [HttpGet("ValidateToken")]
+    [SwaggerOperation(Summary = "Validates the provided JWT token")]
+    [SwaggerResponse(200, "Token is valid")]
+    [SwaggerResponse(401, "Token is invalid or expired", Type = typeof(string))]
+    public IActionResult ValidateToken()
+    {
+        var authHeader = this.Request.Headers["Authorization"].ToString();
+
+        if (string.IsNullOrEmpty(authHeader) || !authHeader.StartsWith("Bearer "))
+            throw new UnauthorizedAccessException("No JWT token provided.");
+
+        var token = authHeader.Split(" ")[1];
+        var isValid = Authentication.ValidateJwtToken(token, _configuration);
+
+        if (!isValid)
+            throw new UnauthorizedAccessException("Token is invalid or expired.");
+
+        return Ok(new { message = "Token is valid." });
     }
 }
-

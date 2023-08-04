@@ -1,10 +1,10 @@
 ﻿using Store.Entities;
 
-namespace Store.Interface
+namespace Store.IRepository
 {
     public interface IBookRepository
     {
-        IEnumerable<Book> GetAllBooks();
+        Task<IEnumerable<Book>> GetAllBooks(string searchTerm = null);
 
         Task<Book> UpdateBook(Book book);
 
