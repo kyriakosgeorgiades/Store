@@ -34,6 +34,7 @@ cd project-backend
 ### Configure AppSettings
 
 Before running the application, make sure to update the `AppSettings.json` file with your local development settings:
+For the sake of the exercises, the user id and password are in the settings in the repository ready to be used.
 
 1. Change the `ServerName` property to "localhost" for Entity Framework migration and integration testing to work correctly:
 
