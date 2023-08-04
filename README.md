@@ -24,11 +24,12 @@ This repository contains the backend code for the BookStore. It provides RESTful
 To get started, clone the repository to your local machine:
 
 ```bash
-[git clone https://github.com/your-username/project-backend.git](https://github.com/kyriakosgeorgiades/Store.git) ```
+https://github.com/kyriakosgeorgiades/Store.git
+ ```
 
 Change into the project folder:
 ```bash
-cd project-backend
+cd Store
 ```
 
 ### Configure AppSettings
@@ -50,6 +51,8 @@ For the sake of the exercises, the user id and password are in the settings in t
 ```bash
 Update-Database
 ```
+
+A seeder is applied to the database each time the docker starts up for the sake of having ready-to-use data for demo and faster development.
 
 3. After is completed switch back the server to "db" and switch the startup project to docker-compose to run the API with the database. Docker Desktop that you have previously installed will prompt a message to start up:
 ```json
