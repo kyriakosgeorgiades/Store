@@ -8,7 +8,6 @@
    - [Configure AppSettings](#configure-appsettings)
    - [Testing](#testing)
 2. [Accessing the API](#accessing-the-api)
-   - [API Documentation](#api-documentation)
 
 This repository contains the backend code for the BookStore. It provides RESTful APIs for managing books and authors.
 
@@ -67,7 +66,7 @@ A seeder is applied to the database each time the docker starts up for the sake 
 To run the tests both integration and unit test switch the connection string to "localhost" and right-click on the Test project and select "Run Tests". After you are done don't forget to switch back to "db" the server in the connection string
 
 
-Accessing the API
+### Accessing the API
 Once the application is running, you can access the API documentation at:
 
 http://localhost:8081/swagger/index.html
