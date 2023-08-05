@@ -15,7 +15,7 @@ This repository contains the backend code for the BookStore. It provides RESTful
 
 ### Prerequisites
 
-- [.NET SDK](https://dotnet.microsoft.com/download) (version X.X.X or higher)
+- [.NET SDK](https://dotnet.microsoft.com/download) (version 7.0 or higher)
 - [Docker](https://www.docker.com/get-started) (for local development and testing)
 
 ### Clone the Repository
