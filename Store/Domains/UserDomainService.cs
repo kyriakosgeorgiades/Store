@@ -32,7 +32,7 @@ namespace Store.Domains.Users
         /// </summary>
         /// <param name="model">DTO containing user's login credentials.</param>
         /// <returns>Authenticated user entity if credentials are valid.</returns>
-        public async Task<User> AuthenticateAsync(LoginModelRequest model)
+        public async Task<User?> AuthenticateAsync(LoginModelRequest model)
         {
             var user = await _userRepository.GetUserByUserNameOrEmail(model.UserNameOrEmail);
 
