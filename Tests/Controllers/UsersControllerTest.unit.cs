@@ -2,6 +2,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using NUnit.Framework;
+using Store;
 using Store.Context;
 using Store.Entities;
 using Store.Models.Users.Request;

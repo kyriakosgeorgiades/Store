@@ -26,7 +26,7 @@ namespace Store.Repository
         /// </summary>
         /// <param name="searchTerm">The optional search term.</param>
         /// <returns>A list of books matching the search term (if provided) or all books if no search term is specified.</returns>
-        public async Task<IEnumerable<Book>> GetAllBooks(string searchTerm = null)
+        public async Task<IEnumerable<Book>> GetAllBooks(string? searchTerm = null)
         {
             IQueryable<Book> query = _context.Books.Include(b => b.Author);
 
@@ -87,7 +87,7 @@ namespace Store.Repository
         /// </summary>
         /// <param name="bookId">The unique identifier of the Book.</param>
         /// <returns>The Book entity with the specified BookId, or null if not found.</returns>
-        public async Task<Book> GetBookById(Guid bookId)
+        public async Task<Book?> GetBookById(Guid bookId)
         {
             return await _context.Books.FirstOrDefaultAsync(b => b.BookId == bookId);
         }
