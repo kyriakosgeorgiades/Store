@@ -33,7 +33,7 @@ cd Store
 
 ### Configure AppSettings
 
-Before running the application, make sure to update the `AppSettings.json` file with your local development settings:
+Before running the application, make sure to update the `AppSettings.Development.json` file with your local development settings:
 For the sake of the exercises, the user id and password are in the settings in the repository ready to be used.
 
 1. Change the `ServerName` property to "localhost" for Entity Framework migration and integration testing to work correctly:
@@ -46,14 +46,14 @@ For the sake of the exercises, the user id and password are in the settings in t
 }
 ```
 
-2. To complete the migration switch the ServerName to "localhost" for the application to connect to the database. To update the database run you need to switch the startup project to "Store" and then run
+2. To complete the migration start the containers which we be auto promt or use ```docker-compose up --build``` switch the ServerName to "localhost" for the application to connect to the database. To update the database run you need to switch the startup project to "Store" and then run
 ```bash
 Update-Database
 ```
 
 A seeder is applied to the database each time the docker starts up for the sake of having ready-to-use data for demo and faster development.
 
-3. After is completed switch back the server to "db" and switch the startup project to docker-compose to run the API with the database. Docker Desktop that you have previously installed will prompt a message to start up:
+3. After is completed switch back the server to "db" and switch the startup project to docker-compose to run the API with the database.
 ```json
 {
   "ConnectionStrings": {
